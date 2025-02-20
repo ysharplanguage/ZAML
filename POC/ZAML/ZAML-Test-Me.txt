@@ -23,12 +23,15 @@
       c
       #
         id: I am an object, somewhat buried ;^)
-        value: whatever
+        value: "whatever else"
       d
+
+      "foo bar"
     e
+    "g e e"
 
   object: #
-    key: value
+    "a key": value
 
   array: @
     #

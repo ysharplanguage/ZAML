@@ -42,16 +42,18 @@ namespace ZAML
                         int colon;
                         if ((colon = value.LastIndexOf(':')) > 0)
                         {
+                            var name = value.Substring(0, colon);
                             if ((hash = colon < value.LastIndexOf('#')) || colon < value.LastIndexOf('@'))
                             {
-                                parse.Add(NewKey(value.Substring(0, colon)));
+                                name = name.StartsWith('"') && name.EndsWith('"') ? name.Substring(1, name.Length - 2) : name;
+                                parse.Add(NewKey(name));
                             }
                             else
                             {
-                                var name = value.Substring(0, colon);
                                 value = value.Substring(colon + 1).Trim();
                                 if (value.Length > 0)
                                 {
+                                    name = name.StartsWith('"') && name.EndsWith('"') ? name.Substring(1, name.Length - 2) : name;
                                     parse.Add(NewKey(name));
                                     if (value == "#")
                                     {
@@ -259,14 +261,16 @@ namespace ZAML
         ""c"",
         {
           ""id"": ""I am an object, somewhat buried ;^)"",
-          ""value"": ""whatever""
+          ""value"": ""whatever else""
         },
-        ""d""
+        ""d"",
+        ""foo bar""
       ],
-      ""e""
+      ""e"",
+      ""g e e""
     ],
     ""object"": {
-      ""key"": ""value""
+      ""a key"": ""value""
     },
     ""array"": [
       {
@@ -289,6 +293,7 @@ namespace ZAML
             var json = JsonSerializer.Serialize(parse, new JsonSerializerOptions { WriteIndented = true });
             Console.WriteLine(json);
             System.Diagnostics.Debug.Assert(json == expected_json);
+            Console.WriteLine("The end");
             Console.ReadKey(true);
         }
     }
