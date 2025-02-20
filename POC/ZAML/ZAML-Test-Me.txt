@@ -14,6 +14,10 @@
    zaml: @
       Zero (Almost!) Markup Language
       more consistent than YAML
+      "even better for configuration...
+... and,
+    well... \"yeah!\"...
+ other things"
 
  // Inert comment surrounded by blank lines :)
 
@@ -26,11 +30,13 @@
          #
             id: I am an object, somewhat buried ;^)
             value: "whatever else"
-         d
+               
+         e // (Belongs to same array as c)
 
-      "foo bar"
+      " foo...
+    ... and bar..."
 
-      e
+      f
       "g e e"
 
    object: #
@@ -42,7 +48,11 @@
       #
          boolean: true
       #
-         integer: 1
+         integer: -65537
+      #
+         long: 136129581883
+      #
+         decimal: 3.1416
 
    alias: #
       bar: baz
