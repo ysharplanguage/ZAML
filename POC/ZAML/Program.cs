@@ -1,7 +1,11 @@
 ﻿using System;
 using System.IO;
 using System.Text.Json;
+using System.Xml.Linq;
 using System.Text.Zaml;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.Encodings.Web;
 namespace ZAML
 {
     internal class Program
@@ -10,6 +14,14 @@ namespace ZAML
         {
             var expected_json = @"[
   {
+    ""xml"": [
+      ""very rigid"",
+      ""hurts the eyes..."",
+      ""<doc id=\""101\"">\r\n                  Hello, \""world\""!\r\n                  back \\ slash\r\n              </doc>"",
+      {
+        ""smallest_xml"": ""<x />""
+      }
+    ],
     ""json"": [
       ""rigid"",
       ""better for data interchange""
@@ -21,7 +33,7 @@ namespace ZAML
     ""zaml"": [
       ""Zero (Almost!) Markup Language"",
       ""more consistent than YAML"",
-      ""even better for configuration...\n... and,\n    well... \u0022yeah!\u0022...\n other things"",
+      ""even better for configuration...\n... and,\n    well... \""yeah!\""...\n other things"",
       ""smarter arrays (of arrays of arrays...)"",
       ""2025-02-20T00:00:00""
     ],
@@ -30,7 +42,7 @@ namespace ZAML
       [
         ""c"",
         {
-          ""id"": ""I am an object, somewhat buried ;^)"",
+          ""id"": ""I'm an object, somewhat buried ;^)"",
           ""when"": ""1970-03-01T00:00:00""
         },
         ""e"",
@@ -61,19 +73,27 @@ namespace ZAML
     ]
   }
 ]";
+            static object XDocumentToString(object o)
+            {
+                if (o is Dictionary<string, object> d) return d.ToDictionary(p => p.Key, p => XDocumentToString(p.Value));
+                else if (o is object[] a) return a.Select(XDocumentToString).ToArray();
+                else if (o is XDocument x) return x.Root.ToString();
+                else return o;
+            }
             var input = File.ReadAllText("ZAML-Test-Me.txt"/*args[0]*/);
             var parser = new OffsideParser(3) {
                 ToHostValue =
                     (type, data) =>
-                        type == "DateTime" ? DateTime.Parse(data) : typeof(void),
+                        type == "DateTime" ? DateTime.Parse(data) : type == "XDocument" ? XDocument.Parse(data) : typeof(void),
                 IsHostValue =
-                    value =>
-                        value is DateTime
+                    value => value is DateTime || value is XDocument
             };
             var parse = parser.Parse(input);
-            var json = JsonSerializer.Serialize(parse, new JsonSerializerOptions { WriteIndented = true });
+            parse = XDocumentToString(parse);
+            var json = JsonSerializer.Serialize(parse, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
             System.Diagnostics.Debug.Assert(json == expected_json);
             Console.WriteLine(json);
+            Console.WriteLine("The end");
             Console.ReadKey(true);
         }
     }

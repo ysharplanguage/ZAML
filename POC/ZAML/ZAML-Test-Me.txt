@@ -3,6 +3,20 @@
 // (Indentation: 3)
 
 #
+   xml: @
+      very rigid
+      hurts the eyes...
+
+      (# XDocument: <?xml version="1.0" ?>
+
+              <doc id="101">
+                  Hello, "world"!
+                  back \ slash
+              </doc> #)
+
+      #
+         smallest_xml: (# XDocument: <x/> #)
+
    json: @
       rigid
       better for data interchange
@@ -28,7 +42,7 @@
       a
          c
          #
-            id: I am an object, somewhat buried ;^)
+            id: I'm an object, somewhat buried ;^)
             when: (# DateTime: 1970-03-01 #)
                
          e // (Belongs to same array as c)

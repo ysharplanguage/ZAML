@@ -14,10 +14,12 @@ namespace System.Text.Zaml
             internal int LineNo => at + 1;
         }
         private readonly int indent;
+        private static readonly Regex Hosted = new Regex("\\(\\#[^\\:]+\\:.*?\\#\\)", RegexOptions.Compiled | RegexOptions.Singleline);
+
         private static readonly Regex Literals = new Regex("\"(\\\\\"|[^\"])*\"", RegexOptions.Compiled);
         private static KeyValuePair<string, object> NewKey(string name) => new KeyValuePair<string, object>(name, null);
         private static object EmptyArray() => new object[0];
-        private static object EmptyObject() => new Dictionary<string, object>();
+        private static object EmptyObject() => new Dictionary<string, object>(); // \(\#[^\:\s]+\:(.|\n)*\#\)
         private static (object, string) DoParse(LineReader reader, Func<string, string, object> toHostValue, int indent, int at = 0, string nextLine = null)
         {
             static int IndentOf(string line) { int count = 0, c = -1; while (++c < line.Length && char.IsWhiteSpace(line[c])) count++; return count; }
@@ -37,10 +39,10 @@ namespace System.Text.Zaml
                         if (toHostValue != null && (c = value.IndexOf(':')) > 2 && (e = value.IndexOf("#)")) > c)
                         {
                             string type = value.Substring(2, c - 2).Trim(), data = value.Substring(c + 1, e - c - 1).Trim();
-                            var hosted = toHostValue(type, data);
-                            if (!ReferenceEquals(hosted, typeof(void))) parse.Add(hosted); else throw new InvalidOperationException($"Invalid value '{value}' at line {reader.LineNo}");
+                            var hosted = toHostValue(type, data.Substring(1, data.Length - 2).Replace("\\n", "\n").Replace("\\\"", "\"").Replace("\\\\", "\\"));
+                            if (!ReferenceEquals(hosted, typeof(void))) parse.Add(hosted); else throw new InvalidOperationException($"Unsupported value '{value}' at line {reader.LineNo}");
                         }
-                        else throw new InvalidOperationException($"Invalid value '{value}' at line {reader.LineNo}");
+                        else throw new InvalidOperationException($"Malformed value '{value}' at line {reader.LineNo}");
                     }
                     else if ((colon = value.IndexOf(':')) > 0)
                     {
@@ -52,11 +54,11 @@ namespace System.Text.Zaml
                             if (toHostValue != null && (c = value.IndexOf(':')) > 2 && (e = value.IndexOf("#)")) > c)
                             {
                                 string type = value.Substring(2, c - 2).Trim(), data = value.Substring(c + 1, e - c - 1).Trim();
-                                var hosted = toHostValue(type, data);
+                                var hosted = toHostValue(type, data.Substring(1, data.Length - 2).Replace("\\n", "\n").Replace("\\\"", "\"").Replace("\\\\", "\\"));
                                 parse.Add(NewKey(name));
-                                if (!ReferenceEquals(hosted, typeof(void))) parse.Add(hosted); else throw new InvalidOperationException($"Invalid value '{value}' at line {reader.LineNo}");
+                                if (!ReferenceEquals(hosted, typeof(void))) parse.Add(hosted); else throw new InvalidOperationException($"Unsupported value '{value}' at line {reader.LineNo}");
                             }
-                            else throw new InvalidOperationException($"Invalid value '{value}' at line {reader.LineNo}");
+                            else throw new InvalidOperationException($"Malformed value '{value}' at line {reader.LineNo}");
                         }
                         else if ((hash = colon < value.LastIndexOf('#')) || colon < value.LastIndexOf('@'))
                         {
@@ -111,7 +113,7 @@ namespace System.Text.Zaml
                                     }
                                 }
                             }
-                            else throw new InvalidOperationException($"Invalid value '{value}' at line {reader.LineNo}");
+                            else throw new InvalidOperationException($"Malformed value '{value}' at line {reader.LineNo}");
                         }
                     }
                     else if (value == "#")
@@ -184,7 +186,15 @@ namespace System.Text.Zaml
         public OffsideParser(int indent = 0) => this.indent = indent > 1 ? indent : 2;
         public object Parse(string input)
         {
-            static string Replacer(Match match) => match.Value.Replace("\n", "\\n");
+            static string AsHosted(Match match)
+            {
+                var c = match.Value.IndexOf(':');
+                var e = match.Value.IndexOf("#)");
+                var type = match.Value.Substring(2, c - 2).Trim();
+                var data = match.Value.Substring(c + 1, e - c - 1).Trim();
+                return $"(# {type} : \"{data.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n")}\" #)";
+            }
+            static string AsLiteral(Match match) => match.Value.Replace("\n", "\\n");
             static bool IsValid(Func<object, bool> isHostValue, object o) =>
                 o == null || (o is Dictionary<string, object> d && d.Values.All(x => IsValid(isHostValue, x))) || (o is object[] a && a.All(x => IsValid(isHostValue, x))) ||
                 o is string || o is decimal || o is long || o is int || o is bool || isHostValue != null && isHostValue(o);
@@ -221,7 +231,7 @@ namespace System.Text.Zaml
                                 }
                                 else
                                 {
-                                    throw new InvalidOperationException("Invalid object layout");
+                                    throw new InvalidOperationException("Invalid input parse");
                                 }
                             }
                             else
@@ -234,8 +244,8 @@ namespace System.Text.Zaml
                 }
                 return o;
             }
-            var reader = new LineReader(Literals.Replace(input.ReplaceLineEndings("\n"), Replacer).Split('\n'));
-            var parse = DoParse(reader, ToHostValue, indent).Item1; object[] array;
+            var reader = new LineReader(Literals.Replace(Hosted.Replace(input.ReplaceLineEndings("\n"), AsHosted), AsLiteral).Split('\n'));
+            var parse = DoParse(reader, ToHostValue ?? ((type, data) => typeof(void)), indent).Item1; object[] array;
             if ((array = parse as object[]) != null && array.Length > 0 && ReferenceEquals(array[array.Length - 1], string.Empty)) Array.Resize(ref array, array.Length - 1);
             return IsValid(IsHostValue, parse = Normalize(array)) ? parse : throw new InvalidOperationException("Invalid object layout");
         }
