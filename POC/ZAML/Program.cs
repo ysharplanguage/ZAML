@@ -172,7 +172,7 @@ namespace ZAML
                     }
                 }
             }
-            public OffsideParser(int indent = 0) => this.indent = indent > 0 ? indent : 2;
+            public OffsideParser(int indent = 0) => this.indent = indent > 1 ? indent : 2;
             public object Parse(string input)
             {
                 static bool IsValid(object o) =>
@@ -263,9 +263,9 @@ namespace ZAML
           ""id"": ""I am an object, somewhat buried ;^)"",
           ""value"": ""whatever else""
         },
-        ""d"",
-        ""foo bar""
+        ""d""
       ],
+      ""foo bar"",
       ""e"",
       ""g e e""
     ],
@@ -289,7 +289,7 @@ namespace ZAML
   }
 ]";
             var input = File.ReadAllText("ZAML-Test-Me.txt"/*args[0]*/);
-            var parse = new OffsideParser().Parse(input);
+            var parse = new OffsideParser(3).Parse(input);
             var json = JsonSerializer.Serialize(parse, new JsonSerializerOptions { WriteIndented = true });
             Console.WriteLine(json);
             System.Diagnostics.Debug.Assert(json == expected_json);
