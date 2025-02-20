@@ -1,0 +1,42 @@
+// ZAML - Zero (Almost!) Markup Language - Better than XML, YAML, JSON!
+
+#
+  json: @
+    rigid
+    better for data interchange
+
+  yaml: @
+    slim and flexible
+    better for configuration
+
+  zaml: @
+    Zero (Almost!) Markup Language
+    more consistent than YAML
+
+ // Inert comment surrounded by blank lines :)
+
+    smarter arrays (of arrays of arrays...)
+
+  nice_ZAML_array_of_array: @               // Another inert comment :)
+    a
+    b
+      c
+      #
+        id: I am an object, somewhat buried ;^)
+        value: whatever
+      d
+    e
+
+  object: #
+    key: value
+
+  array: @
+    #
+      null_value: null
+    #
+      boolean: true
+    #
+      integer: 1
+
+  alias: #
+    bar: baz
