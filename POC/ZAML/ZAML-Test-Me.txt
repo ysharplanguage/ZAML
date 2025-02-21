@@ -1,6 +1,6 @@
 // ZAML - Zero (Almost!) Markup Language - Better than XML, YAML, JSON!
 
-// (Indentation: 3)
+// (Indentation = 3, auto detected)
 
 #
    xml: @
@@ -21,8 +21,8 @@
       rigid
       "better for data interchange"
 
+   "a date": (# DateTime: 2025-02-21 #)
    digits: 0 1 2 3 4 5 6 7 8 9
-
    digit_names: zero one two three four five six seven eight nine
 
    yaml: @
@@ -32,9 +32,9 @@
    zaml: @
       "Zero (Almost!) Markup Language"
       "more consistent than YAML"
-      "even better for configuration...
+      $"even better for configuration...
 ... and,\n    well... \"yeah!\"...
- other things" // Trailing comment
+ other things (PI^2 = {# PI #} * {# PI #}... {but {#what else#}?})" // Trailing comment
 
  // Inert comment surrounded by blank lines :)
 

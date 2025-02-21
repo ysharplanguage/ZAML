@@ -26,6 +26,7 @@ namespace ZAML
       ""rigid"",
       ""better for data interchange""
     ],
+    ""a date"": ""2025-02-21T00:00:00"",
     ""digits"": [
       0,
       1,
@@ -57,7 +58,7 @@ namespace ZAML
     ""zaml"": [
       ""Zero (Almost!) Markup Language"",
       ""more consistent than YAML"",
-      ""even better for configuration...\n... and,\n    well... \""yeah!\""...\n other things"",
+      ""even better for configuration...\n... and,\n    well... \""yeah!\""...\n other things (PI^2 = {# PI #} * {# PI #}... {but {#what else#}?})"",
       ""smarter arrays (of arrays of arrays...)"",
       ""2025-02-20T00:00:00""
     ],
@@ -122,14 +123,23 @@ namespace ZAML
                 else return o;
             }
             var input = File.ReadAllText("ZAML-Test-Me.txt"/*args[0]*/);
-            var parser = new OffsideParser(3) { // TODO: add indent auto detect
-                ToHostValue =
-                    (type, data) =>
-                        type == "DateTime" ? DateTime.Parse(data) : type == "XDocument" ? XDocument.Parse(data) : typeof(void),
-                IsHostValue =
-                    value => value is DateTime || value is XDocument
+            var parser = new OffsideParser()
+            {
+                AsHostValue = (type, data) =>
+                    type == "DateTime" ? DateTime.Parse(data) :
+                    type == "XDocument" ? XDocument.Parse(data) :
+                    typeof(void),
+                ToHostValue = (context, expr) =>
+                    ((Dictionary<string, object>)context).TryGetValue(expr.Trim(), out var found) ? found : expr,
+                IsHostValue = value =>
+                    value is DateTime || value is XDocument
             };
-            var parse = XDocumentToString(parser.Parse(input));
+            var context = new Dictionary<string, object>
+            {
+                ["PI"] = 3.141593m
+            };
+            var parse = parser.Parse(context, input);
+            parse = XDocumentToString(parse);
             var json = JsonSerializer.Serialize(parse, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
             System.Diagnostics.Debug.Assert(json == expected_json);
             Console.WriteLine(json);
