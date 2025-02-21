@@ -1,11 +1,11 @@
 ﻿using System;
-using System.IO;
-using System.Text.Json;
-using System.Xml.Linq;
-using System.Text.Zaml;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Zaml;
+using System.Xml.Linq;
 namespace ZAML
 {
     internal class Program
@@ -122,7 +122,7 @@ namespace ZAML
                 else return o;
             }
             var input = File.ReadAllText("ZAML-Test-Me.txt"/*args[0]*/);
-            var parser = new OffsideParser(3) {
+            var parser = new OffsideParser(3) { // TODO: add indent auto detect
                 ToHostValue =
                     (type, data) =>
                         type == "DateTime" ? DateTime.Parse(data) : type == "XDocument" ? XDocument.Parse(data) : typeof(void),
