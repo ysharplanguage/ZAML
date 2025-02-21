@@ -8,12 +8,14 @@ namespace System.Text.Zaml
     {
         internal sealed class LineReader
         {
-            private readonly string[] lines; private int at = -1;
+            private readonly string[] lines;
+            private int at = -1;
             internal LineReader(string[] lines) => this.lines = lines;
             internal string Next() { int tail; while (++at < lines.Length && (string.Equals(lines[at].Trim(), string.Empty) || string.Equals((lines[at] = (tail = lines[at].IndexOf("//")) >= 0 ? lines[at].Substring(0, tail).TrimEnd() : lines[at]).Trim(), string.Empty))) ; return at < lines.Length ? lines[at] : null; }
             internal int LineNo => at + 1;
         }
         private readonly int indent;
+        private static readonly Regex Spaces = new Regex("\\s+", RegexOptions.Compiled);
         private static readonly Regex Hosted = new Regex("\\(\\#[^\\:]+\\:.*?\\#\\)", RegexOptions.Compiled | RegexOptions.Singleline);
 
         private static readonly Regex Literals = new Regex("\"(\\\\\"|[^\"])*\"", RegexOptions.Compiled);
@@ -74,29 +76,29 @@ namespace System.Text.Zaml
                             {
                                 name = name.StartsWith('"') && name.EndsWith('"') ? name.Substring(1, name.Length - 2) : name;
                                 parse.Add(NewKey(name));
-                                if (value == "#")
+                                if (value == "#") { /* (Non-empty object literal) */ }
+                                else if (value == "[]") parse.Add(EmptyArray());
+                                else if (value == "{}") parse.Add(EmptyObject());
+                                else if (value == "false") parse.Add(false);
+                                else if (value == "true") parse.Add(true);
+                                else if (value == "null") parse.Add(null);
+                                else if (Spaces.Match(value).Success && value.IndexOf('"') < 0 && value.IndexOf('\\') < 0)
                                 {
-                                    // (Non-empty object literal)
-                                }
-                                else if (value == "[]")
-                                {
-                                    parse.Add(EmptyArray());
-                                }
-                                else if (value == "{}")
-                                {
-                                    parse.Add(EmptyObject());
-                                }
-                                else if (value == "false")
-                                {
-                                    parse.Add(false);
-                                }
-                                else if (value == "true")
-                                {
-                                    parse.Add(true);
-                                }
-                                else if (value == "null")
-                                {
-                                    parse.Add(null);
+                                    var split = Spaces.Replace(value, " ").Split(' ');
+                                    var list = new List<object>();
+                                    foreach (var item in split)
+                                    {
+                                        if (item == "[]") list.Add(EmptyArray());
+                                        else if (item == "{}") list.Add(EmptyObject());
+                                        else if (item == "false") list.Add(false);
+                                        else if (item == "true") list.Add(true);
+                                        else if (item == "null") list.Add(null);
+                                        else if (int.TryParse(item, out var i32)) list.Add(i32);
+                                        else if (long.TryParse(item, out var i64)) list.Add(i64);
+                                        else if (decimal.TryParse(item, out var d)) list.Add(d);
+                                        else list.Add(item);
+                                    }
+                                    parse.Add(list.ToArray());
                                 }
                                 else
                                 {
@@ -116,33 +118,30 @@ namespace System.Text.Zaml
                             else throw new InvalidOperationException($"Malformed value '{value}' at line {reader.LineNo}");
                         }
                     }
-                    else if (value == "#")
+                    else if (value == "#") parse.Add(NewKey(string.Empty));
+                    else if (value == "@") { /* Non-empty array literal) */ }
+                    else if (value == "[]") parse.Add(EmptyArray());
+                    else if (value == "{}") parse.Add(EmptyObject());
+                    else if (value == "false") parse.Add(false);
+                    else if (value == "true") parse.Add(true);
+                    else if (value == "null") parse.Add(null);
+                    else if (Spaces.Match(value).Success && value.IndexOf('"') < 0 && value.IndexOf('\\') < 0)
                     {
-                        parse.Add(NewKey(string.Empty));
-                    }
-                    else if (value == "@")
-                    {
-                        // (Non-empty array literal)
-                    }
-                    else if (value == "[]")
-                    {
-                        parse.Add(EmptyArray());
-                    }
-                    else if (value == "{}")
-                    {
-                        parse.Add(EmptyObject());
-                    }
-                    else if (value == "false")
-                    {
-                        parse.Add(false);
-                    }
-                    else if (value == "true")
-                    {
-                        parse.Add(true);
-                    }
-                    else if (value == "null")
-                    {
-                        parse.Add(null);
+                        var split = Spaces.Replace(value, " ").Split(' ');
+                        var list = new List<object>();
+                        foreach (var item in split)
+                        {
+                            if (item == "[]") list.Add(EmptyArray());
+                            else if (item == "{}") list.Add(EmptyObject());
+                            else if (item == "false") list.Add(false);
+                            else if (item == "true") list.Add(true);
+                            else if (item == "null") list.Add(null);
+                            else if (int.TryParse(item, out var i32)) list.Add(i32);
+                            else if (long.TryParse(item, out var i64)) list.Add(i64);
+                            else if (decimal.TryParse(item, out var d)) list.Add(d);
+                            else list.Add(item);
+                        }
+                        parse.Add(list.ToArray());
                     }
                     else
                     {
@@ -196,7 +195,8 @@ namespace System.Text.Zaml
             }
             static string AsLiteral(Match match) => match.Value.Replace("\n", "\\n");
             static bool IsValid(Func<object, bool> isHostValue, object o) =>
-                o == null || (o is Dictionary<string, object> d && d.Values.All(x => IsValid(isHostValue, x))) || (o is object[] a && a.All(x => IsValid(isHostValue, x))) ||
+                o == null ||
+                (o is Dictionary<string, object> d && d.Values.All(x => IsValid(isHostValue, x))) || (o is object[] a && a.All(x => IsValid(isHostValue, x))) ||
                 o is string || o is decimal || o is long || o is int || o is bool || isHostValue != null && isHostValue(o);
             static object Normalize(object o)
             {

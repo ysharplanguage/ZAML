@@ -26,6 +26,30 @@ namespace ZAML
       ""rigid"",
       ""better for data interchange""
     ],
+    ""digits"": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    ""digit_names"": [
+      ""zero"",
+      ""one"",
+      ""two"",
+      ""three"",
+      ""four"",
+      ""five"",
+      ""six"",
+      ""seven"",
+      ""eight"",
+      ""nine""
+    ],
     ""yaml"": [
       ""slim and flexible"",
       ""better for configuration""
@@ -41,6 +65,23 @@ namespace ZAML
       ""a"",
       [
         ""c"",
+        [
+          0,
+          null,
+          136129581883,
+          false,
+          2,
+          true,
+          3.1416,
+          [],
+          4,
+          {},
+          5,
+          -65537,
+          7,
+          8,
+          9
+        ],
         {
           ""id"": ""I'm an object, somewhat buried ;^)"",
           ""when"": ""1970-03-01T00:00:00""
@@ -88,8 +129,7 @@ namespace ZAML
                 IsHostValue =
                     value => value is DateTime || value is XDocument
             };
-            var parse = parser.Parse(input);
-            parse = XDocumentToString(parse);
+            var parse = XDocumentToString(parser.Parse(input));
             var json = JsonSerializer.Serialize(parse, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
             System.Diagnostics.Debug.Assert(json == expected_json);
             Console.WriteLine(json);
