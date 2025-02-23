@@ -21,7 +21,7 @@
       rigid
       "better for data interchange"
 
-   "a date": (# DateTime: 2025-02-21 #)
+   "a date" : (# DateTime: 2025-02-21 #)
    digits: 0 1 2 3 4 5 6 7 8 9
    $digit_names: zero one two three four five six seven eight nine
 
@@ -44,7 +44,7 @@
    empty: $ // Empty string shortcut
    ten: $10 // Stringify shortcut
 
-   nice_ZAML_array_of_array: @               // Another inert comment :)
+   nice ZAML array of arrays : @               // Another inert comment :)
       a
          c
          0 null 136129581883 false 2 $true 3.1416 4 5 -65537 7 $8 9
@@ -56,14 +56,14 @@
 
       " foo...
     ... and bar..."
-      f
+      $
       []
       "g e e"
 
    array_of_objects: @
       #
          null_value: null
-         empty: []
+         : [] // (Empty key)
       #
          boolean: true
       #

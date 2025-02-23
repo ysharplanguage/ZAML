@@ -50,7 +50,7 @@ namespace System.Text.ZAML
                         }
                         else throw new InvalidOperationException($"Malformed value '{value}'");
                     }
-                    else if ((colon = value.IndexOf(':')) > 0)
+                    else if ((colon = value.IndexOf(':')) >= 0)
                     {
                         string name;
                         if (value.IndexOf("(#") > colon)
@@ -94,7 +94,7 @@ namespace System.Text.ZAML
                                     var text = value.Substring(bound, value.Length - bound - 1).Replace("\\n", "\n").Replace("\\\"", "\"");
                                     parse.Add(bound > 1 ? Interpolation.Replace(text, Interpolated) : text);
                                 }
-                                else if (Spaces.Match(value).Success && value.IndexOf('"') < 0 && value.IndexOf('\\') < 0)
+                                else if (Spaces.Match(value).Success && value.IndexOf('"') < 0)
                                 {
                                     var split = Spaces.Replace(value, " ").Split(' ');
                                     var list = new List<object>();
@@ -107,7 +107,7 @@ namespace System.Text.ZAML
                                         else if (int.TryParse(item, out var si32)) list.Add(si32);
                                         else if (long.TryParse(item, out var si64)) list.Add(si64);
                                         else if (decimal.TryParse(item, out var sd)) list.Add(sd);
-                                        else if (item.Length > 0 && item[0] == '$') list.Add(item.Substring(1));
+                                        else if (item.Length > 0 && item[0] == '$') list.Add(asHostValue(null, item.Substring(1)));
                                         else if (item.Length > 0 && (item[0] == '_' || char.IsLetter(item[0]))) list.Add(item);
                                         else throw new InvalidOperationException($"Malformed value '{item}'");
                                     }
@@ -136,7 +136,7 @@ namespace System.Text.ZAML
                         var text = value.Substring(bound, value.Length - bound - 1).Replace("\\n", "\n").Replace("\\\"", "\"");
                         parse.Add(bound > 1 ? Interpolation.Replace(text, Interpolated) : text);
                     }
-                    else if (Spaces.Match(value).Success && value.IndexOf('"') < 0 && value.IndexOf('\\') < 0)
+                    else if (Spaces.Match(value).Success && value.IndexOf('"') < 0)
                     {
                         var split = Spaces.Replace(value, " ").Split(' ');
                         var list = new List<object>();
@@ -149,7 +149,7 @@ namespace System.Text.ZAML
                             else if (int.TryParse(item, out var si32)) list.Add(si32);
                             else if (long.TryParse(item, out var si64)) list.Add(si64);
                             else if (decimal.TryParse(item, out var sd)) list.Add(sd);
-                            else if (item.Length > 0 && item[0] == '$') list.Add(item.Substring(1));
+                            else if (item.Length > 0 && item[0] == '$') list.Add(asHostValue(null, item.Substring(1)));
                             else if (item.Length > 0 && (item[0] == '_' || char.IsLetter(item[0]))) list.Add(item);
                             else throw new InvalidOperationException($"Malformed value '{item}'");
                         }

@@ -64,7 +64,7 @@ namespace ZAMLPOC
     ],
     ""empty"": """",
     ""ten"": ""10"",
-    ""nice_ZAML_array_of_array"": [
+    ""nice ZAML array of arrays"": [
       ""a"",
       [
         ""c"",
@@ -91,14 +91,14 @@ namespace ZAMLPOC
         {}
       ],
       "" foo...\n    ... and bar..."",
-      ""f"",
+      """",
       [],
       ""g e e""
     ],
     ""array_of_objects"": [
       {
         ""null_value"": null,
-        ""empty"": []
+        """": []
       },
       {
         ""boolean"": true
@@ -126,8 +126,8 @@ namespace ZAMLPOC
             var parser = new ZAMLParser()
             {
                 AsHostValue = (type, data) =>
-                    type == "DateTime" ? DateTime.Parse(data) :
-                    type == "XDocument" ? XDocument.Parse(data) :
+                    type == null ? data : // (When prefixed by '$')
+                    type == "DateTime" ? DateTime.Parse(data) : type == "XDocument" ? XDocument.Parse(data) :
                     typeof(void),
                 ToHostValue = (context, expr) =>
                     ((Dictionary<string, object>)context).TryGetValue(expr.Trim(), out var found) ? found : expr,
