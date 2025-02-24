@@ -6,22 +6,11 @@
    xml: @
       "very rigid"
       "hurts the eyes..."
-
-      (# XDocument: <?xml version="1.0" ?>
-
-              <doc id="101">
-                  Hello, "world"!
-                  back \ slash
-              </doc> #)
-
-      #
-         smallest_xml: (# XDocument: <x/> #)
-
    json: @
       rigid
       "better for data interchange"
 
-   "a date" : (# DateTime: 2025-02-21 #)
+   "a date" : "2025-02-21"
    digits: 0 1 2 3 4 5 6 7 8 9
    $digit_names: zero one two three four five six seven eight nine
 
@@ -32,25 +21,21 @@
    zaml: @
       "Zero (Almost!) Markup Language"
       "more consistent than YAML"
-      $"even better for configuration...
+      "even better for configuration...
 ... and,\n    well... \"yeah!\"...
- other things (PI^2 = {# PI #} * {# PI #}... {but {#what else#}?})" // Trailing comment
+ other things" // Trailing comment
 
  // Inert comment surrounded by blank lines :)
 
       "smarter arrays (of arrays of arrays...)"
-      (# DateTime: 2025-02-20 #)   // Hosted data type value
-
-   empty: $ // Empty string shortcut
-   ten: $10 // Stringify shortcut
 
    nice ZAML array of arrays : @               // Another inert comment :)
       a
          c
-         0 null 136129581883 false 2 $true 3.1416 4 5 -65537 7 $8 9
+         0 null 136129581883 false 2 truth 3.1416 4 5 -65537 7 eight 9
          #
             id: "I'm an object, somewhat buried ;^)"
-            when: (# DateTime: 1970-03-01 #)               
+            when: "1970-03-01"               
          e // (Belongs to same array as c)
          {}
 

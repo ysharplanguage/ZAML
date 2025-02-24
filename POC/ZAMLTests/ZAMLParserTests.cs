@@ -14,6 +14,7 @@ namespace ZAMLTests
             // Arrange
             var parser = new ZAMLParser();
             var input3 = @"
+
 // (Indentation = 3)
 
 // 3 ""objects"" (so to speak)
@@ -87,6 +88,7 @@ namespace ZAMLTests
             // Arrange
             var parser = new ZAMLParser();
             var input3 = @"
+
 // (Indentation = 3)
 
 // 2 lists, with the second containing implicit sub-lists at various levels
