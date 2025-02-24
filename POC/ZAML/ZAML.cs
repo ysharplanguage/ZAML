@@ -14,7 +14,7 @@ namespace System.Text.ZAML
         }
         private int indent = 0;
         private static readonly Regex Spaces = new Regex("\\s+", RegexOptions.Compiled);
-        private static readonly Regex Special = new Regex("(\\\\|\\\"|\\@|\\#|\\:|\\[|\\]|\\{|\\}|\\(|\\))", RegexOptions.Compiled);
+        private static readonly Regex Special = new Regex("(\\\\|\\\"|\\@|\\#|\\:|\\[|\\]|\\{|\\})", RegexOptions.Compiled);
         private static readonly Regex Literals = new Regex("\"(\\\\\"|[^\"])*\"", RegexOptions.Compiled);
         private static KeyValuePair<string, object> NewKey(string name) => new KeyValuePair<string, object>(name, null);
         private static object EmptyArray() => new object[0];
@@ -22,7 +22,7 @@ namespace System.Text.ZAML
         private static (object, string) DoParse(LineReader reader, int indent, int at = 0, string nextLine = null)
         {
             static int IndentOf(string line) { int count = 0, c = -1; while (++c < line.Length && char.IsWhiteSpace(line[c])) count++; return count; }
-            static string ToKey(string name) => name.StartsWith('"') && name.EndsWith('"') ? name.Substring(1, name.Length - 2) : name == string.Empty || !Special.Match(name).Success ? name : throw new InvalidOperationException($"Invalid key '{name}'");
+            static string ToKey(string name) => name.StartsWith('"') && name.EndsWith('"') ? name.Substring(1, name.Length - 2) : name == string.Empty || !Special.Match(name.Substring(0, 1)).Success ? name : throw new InvalidOperationException($"Invalid key '{name}'");
             var parse = new List<object>();
             var hash = false;
             string line;
@@ -36,7 +36,7 @@ namespace System.Text.ZAML
                 if (dent == at)
                 {
                     var value = line.Substring(dent); int colon;
-                    if ((colon = value.IndexOf(':')) >= 0)
+                    if ((colon = value.IndexOf(':')) >= 0 && (!value.StartsWith('(') || !value.TrimEnd().EndsWith(')')))
                     {
                         string name;
                         if ((hash = colon < value.LastIndexOf('#')) || colon < value.LastIndexOf('@'))
@@ -61,7 +61,8 @@ namespace System.Text.ZAML
                                 else if (long.TryParse(value, out var i64)) parse.Add(i64);
                                 else if (decimal.TryParse(value, out var d)) parse.Add(d);
                                 else if (value.StartsWith('"') && value.EndsWith('"')) parse.Add(value.Substring(1, value.Length - 2).Replace("\\n", "\n").Replace("\\\"", "\""));
-                                else if (Spaces.Match(value).Success && value.Any(c => !char.IsWhiteSpace(c)) && !Special.Match(value).Success)
+                                else if (value.StartsWith('(') && value.EndsWith(')')) parse.Add(value);
+                                else if (Spaces.Match(value).Success && value.Any(c => !char.IsWhiteSpace(c)) && !Special.Match(value.Substring(0, 1)).Success)
                                 {
                                     var split = Spaces.Replace(value, " ").Split(' ');
                                     var list = new List<object>();
@@ -75,11 +76,13 @@ namespace System.Text.ZAML
                                         else if (long.TryParse(item, out var si64)) list.Add(si64);
                                         else if (decimal.TryParse(item, out var sd)) list.Add(sd);
                                         else if (item.Length > 0 && (item[0] == '_' || item[0] == '$' || char.IsLetter(item[0]))) list.Add(item);
+                                        else if (!Special.Match(item.Substring(0, 1)).Success) list.Add(item);
                                         else throw new InvalidOperationException($"Malformed value '{item}'");
                                     }
                                     parse.Add(list);
                                 }
                                 else if (value.Length > 0 && (value[0] == '_' || value[0] == '$' || char.IsLetter(value[0]))) parse.Add(value);
+                                else if (value.Length > 0 && !Special.Match(value.Substring(0, 1)).Success) parse.Add(value);
                                 else throw new InvalidOperationException($"Malformed value '{value}'");
                             }
                             else throw new InvalidOperationException($"Malformed value '{value}'");
@@ -96,7 +99,8 @@ namespace System.Text.ZAML
                     else if (long.TryParse(value, out var i64)) parse.Add(i64);
                     else if (decimal.TryParse(value, out var d)) parse.Add(d);
                     else if (value.StartsWith('"') && value.EndsWith('"')) parse.Add(value.Substring(1, value.Length - 2).Replace("\\n", "\n").Replace("\\\"", "\""));
-                    else if (Spaces.Match(value).Success && value.Any(c => !char.IsWhiteSpace(c)) && !Special.Match(value).Success)
+                    else if (value.StartsWith('(') && value.EndsWith(')')) parse.Add(value);
+                    else if (Spaces.Match(value).Success && value.Any(c => !char.IsWhiteSpace(c)) && !Special.Match(value.Substring(0, 1)).Success)
                     {
                         var split = Spaces.Replace(value, " ").Split(' ');
                         var list = new List<object>();
@@ -110,11 +114,13 @@ namespace System.Text.ZAML
                             else if (long.TryParse(item, out var si64)) list.Add(si64);
                             else if (decimal.TryParse(item, out var sd)) list.Add(sd);
                             else if (item.Length > 0 && (item[0] == '_' || item[0] == '$' || char.IsLetter(item[0]))) list.Add(item);
+                            else if (!Special.Match(item.Substring(0, 1)).Success) list.Add(item);
                             else throw new InvalidOperationException($"Malformed value '{item}'");
                         }
                         parse.Add(list);
                     }
                     else if (value.Length > 0 && (value[0] == '_' || value[0] == '$' || char.IsLetter(value[0]))) parse.Add(value);
+                    else if (value.Length > 0 && !Special.Match(value.Substring(0, 1)).Success) parse.Add(value);
                     else if (value.Length == 0) { }
                     else throw new InvalidOperationException($"Malformed value '{value}'");
                 }
@@ -175,15 +181,9 @@ namespace System.Text.ZAML
                                     r.Add(d);
                                     i += 2;
                                 }
-                                else
-                                {
-                                    throw new InvalidOperationException("Invalid input parse");
-                                }
+                                else throw new InvalidOperationException("Invalid input parse");
                             }
-                            else
-                            {
-                                r.Add(Normalize(a[i++]));
-                            }
+                            else r.Add(Normalize(a[i++]));
                         }
                         return r;
                     }

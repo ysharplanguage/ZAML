@@ -77,7 +77,7 @@ namespace ZAMLPOC
           ""id"": ""I'm an object, somewhat buried ;^)"",
           ""when"": ""1970-03-01""
         },
-        ""e"",
+        ""( d + e )"",
         {}
       ],
       "" foo...\n    ... and bar..."",

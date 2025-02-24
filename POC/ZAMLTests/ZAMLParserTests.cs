@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.ZAML;
 namespace ZAMLTests
@@ -232,6 +233,125 @@ namespace ZAMLTests
             // Act
             var parsed = parser.Parse(input4);
             var equivalent_json = JsonSerializer.Serialize(parsed, new JsonSerializerOptions { WriteIndented = true });
+
+            // Assert
+            Assert.AreEqual(expected_json, equivalent_json);
+        }
+
+        [TestMethod]
+        public void ZAMLParser_Can_Parse_Objects_With_Empty_Keys()
+        {
+            // Arrange
+            var parser = new ZAMLParser();
+            var input4 = @"
+
+#
+    schema: @
+        #
+            // (Pretend hypothetical enum type definition)
+            name: HttpStatus
+            kind: enum
+            base: int
+            : @         // (Empty key)
+                200 OK
+                403 Unauthorized
+                404 NotFound
+
+        #
+            // (Pretend hypothetical class type definition)
+            name: SomeDataModel
+            kind: class
+            base: object
+            : @
+                int Id
+                string ExternalId
+";
+            var expected_json = @"[
+  {
+    ""schema"": [
+      {
+        ""name"": ""HttpStatus"",
+        ""kind"": ""enum"",
+        ""base"": ""int"",
+        """": [
+          [
+            200,
+            ""OK""
+          ],
+          [
+            403,
+            ""Unauthorized""
+          ],
+          [
+            404,
+            ""NotFound""
+          ]
+        ]
+      },
+      {
+        ""name"": ""SomeDataModel"",
+        ""kind"": ""class"",
+        ""base"": ""object"",
+        """": [
+          [
+            ""int"",
+            ""Id""
+          ],
+          [
+            ""string"",
+            ""ExternalId""
+          ]
+        ]
+      }
+    ]
+  }
+]";
+
+            // Act
+            var parsed = parser.Parse(input4);
+            var equivalent_json = JsonSerializer.Serialize(parsed, new JsonSerializerOptions { WriteIndented = true });
+
+            // Assert
+            Assert.AreEqual(expected_json, equivalent_json);
+        }
+
+        [TestMethod]
+        public void ZAMLParser_Can_Parse_Possibly_Embedded_S_Expressions()
+        {
+            // Arrange
+            var parser = new ZAMLParser();
+            var input4 = @"
+#
+    one: ( 0 + 1 )
+    whatever: null
+    : @
+        ( 1 + 2 )
+        null
+            ( 3 * 4 )
+            twelve
+            ( n => ( ( 0 < n ) ? ( n * ( this ( n - 1 ) ) ) : 1 ) )
+            Factorial
+";
+            var expected_json = @"[
+  {
+    ""one"": ""( 0 + 1 )"",
+    ""whatever"": null,
+    """": [
+      ""( 1 + 2 )"",
+      null,
+      [
+        ""( 3 * 4 )"",
+        ""twelve"",
+        ""( n => ( ( 0 < n ) ? ( n * ( this ( n - 1 ) ) ) : 1 ) )"",
+        ""Factorial""
+      ]
+    ]
+  }
+]";
+
+            // Act
+            var parsed = parser.Parse(input4);
+            var equivalent_json = JsonSerializer.Serialize(parsed, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
 
             // Assert
             Assert.AreEqual(expected_json, equivalent_json);
