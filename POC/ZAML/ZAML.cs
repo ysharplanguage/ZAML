@@ -24,7 +24,7 @@ namespace System.Text.ZAML
             static int IndentOf(string line) { int count = 0, c = -1; while (++c < line.Length && char.IsWhiteSpace(line[c])) count++; return count; }
             static string ToKey(string name) => name.StartsWith('"') && name.EndsWith('"') ? name.Substring(1, name.Length - 2) : name == string.Empty || !Special.Match(name.Substring(0, 1)).Success ? name : throw new InvalidOperationException($"Invalid key '{name}'");
             var parse = new List<object>();
-            var hash = false;
+            var isMap = false;
             string line;
             while (true)
             {
@@ -39,7 +39,7 @@ namespace System.Text.ZAML
                     if ((colon = value.IndexOf(':')) >= 0 && (!value.StartsWith('(') || !value.TrimEnd().EndsWith(')')))
                     {
                         string name;
-                        if ((hash = colon < value.LastIndexOf('#')) || colon < value.LastIndexOf('@'))
+                        if ((isMap = colon < value.LastIndexOf('#')) || colon < value.LastIndexOf('@'))
                         {
                             name = value.Substring(0, colon).Trim();
                             parse.Add(NewKey(ToKey(name)));
@@ -130,8 +130,8 @@ namespace System.Text.ZAML
                     {
                         var child = DoParse(reader, indent, dent, line);
                         nextLine = child.Item2;
-                        if (hash) parse.Add(new List<object> { NewKey(null), child.Item1 }); else parse.Add(child.Item1);
-                        hash = false;
+                        if (isMap) parse.Add(new List<object> { NewKey(null), child.Item1 }); else parse.Add(child.Item1);
+                        isMap = false;
                     }
                     else throw new InvalidOperationException($"Invalid indentation ({dent})");
                 }
@@ -150,17 +150,14 @@ namespace System.Text.ZAML
                 (o is Dictionary<string, object> d && d.Values.All(x => IsValid(x))) ||
                 (o is IEnumerable<object> a && a.All(x => IsValid(x))) ||
                 o is string || o is decimal || o is long || o is int || o is bool;
-            static object Normalize(object o)
+            static object Normalize1(object o)
             {
                 if (o is List<object> a && a.Count > 0)
                 {
                     if (a.Count > 1 && a[0] is KeyValuePair<string, object> k && k.Key == null && a[1] is List<object> m)
                     {
                         var d = new Dictionary<string, object>();
-                        for (var i = 0; i < m.Count; i += 2)
-                        {
-                            d.Add(((KeyValuePair<string, object>)m[i]).Key, Normalize(m[i + 1]));
-                        }
+                        for (var i = 0; i < m.Count; i += 2) d.Add(((KeyValuePair<string, object>)m[i]).Key, Normalize1(m[i + 1]));
                         return d;
                     }
                     else
@@ -176,25 +173,28 @@ namespace System.Text.ZAML
                                     var d = new Dictionary<string, object>();
                                     for (var j = 0; j < c.Count; j += 2)
                                     {
-                                        d.Add(((KeyValuePair<string, object>)c[j]).Key, Normalize(c[j + 1]));
+                                        d.Add(((KeyValuePair<string, object>)c[j]).Key, Normalize1(c[j + 1]));
                                     }
                                     r.Add(d);
                                     i += 2;
                                 }
                                 else throw new InvalidOperationException("Invalid input parse");
                             }
-                            else r.Add(Normalize(a[i++]));
+                            else r.Add(Normalize1(a[i++]));
                         }
                         return r;
                     }
                 }
                 return o;
             }
+            static object Normalize2(object o) =>
+                o is Dictionary<string, object> d ? d.ToDictionary(p => p.Key, p => Normalize2(p.Value)) :
+                o is List<object> l ? l.Select(x => Normalize2(x)).ToArray() : o;
             var reader = new LineReader(Literals.Replace(input.ReplaceLineEndings("\n"), AsLiteral).Split('\n'));
             var parse = DoParse(reader, indent).Item1;
             List<object> list;
             if ((list = parse as List<object>) != null && list.Count > 0 && ReferenceEquals(list[list.Count - 1], string.Empty)) list.RemoveAt(list.Count - 1);
-            return IsValid(parse = Normalize(list)) ? parse : throw new InvalidOperationException("Invalid object layout");
+            return IsValid(parse = Normalize2(Normalize1(list))) ? parse : throw new InvalidOperationException("Invalid object layout");
         }
     }
 }

@@ -105,9 +105,9 @@ namespace ZAMLPOC
     ]
   }
 ]";
-            var zaml = new ZAMLParser();
+            var parser = new ZAMLParser();
             var from = File.ReadAllText("ZAMLPOC-Test-Me.txt"/*args[0]*/);
-            var into = zaml.Parse(from);
+            var into = parser.Parse(from);
             var json = JsonSerializer.Serialize(into, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
             System.Diagnostics.Debug.Assert(json == expected);
             Console.WriteLine(from);

@@ -40,11 +40,11 @@ namespace ZAMLTests
 
             // Assert
             Assert.IsNotNull(parsed);
-            Assert.IsInstanceOfType(parsed, typeof(List<object>));
-            var list = (List<object>)parsed;
-            Assert.AreEqual(3, list.Count);
-            Assert.IsTrue(list.All(item => item is Dictionary<string, object>));
-            var items = list.Select(item => (Dictionary<string, object>)item).ToArray();
+            Assert.IsInstanceOfType(parsed, typeof(object[]));
+            var array = (object[])parsed;
+            Assert.AreEqual(3, array.Length);
+            Assert.IsTrue(array.All(item => item is Dictionary<string, object>));
+            var items = array.Select(item => (Dictionary<string, object>)item).ToArray();
             Assert.AreEqual(1, items[0]["id"]);
             Assert.AreEqual("one", items[0]["name"]);
             Assert.AreEqual(2, items[1]["id"]);
@@ -54,7 +54,7 @@ namespace ZAMLTests
         }
 
         [TestMethod]
-        public void ZAMLParser_Can_Parse_With_Ensuring_A_List_As_Root_Node()
+        public void ZAMLParser_Can_Parse_With_Ensuring_An_Array_As_Root_Node()
         {
             // Arrange
             var parser = new ZAMLParser();
@@ -78,9 +78,9 @@ namespace ZAMLTests
             var parsed = parser.Parse(input);
 
             Assert.IsNotNull(parsed);
-            Assert.IsInstanceOfType(parsed, typeof(List<object>));
-            var list = (List<object>)parsed;
-            Assert.IsTrue(new object[] { 1, "200", 3.1416m, -4000, 5_000_000_000_000_000_000 }.SequenceEqual(list));
+            Assert.IsInstanceOfType(parsed, typeof(object[]));
+            var array = (object[])parsed;
+            Assert.IsTrue(new object[] { 1, "200", 3.1416m, -4000, 5_000_000_000_000_000_000 }.SequenceEqual(array));
         }
 
         [TestMethod]
