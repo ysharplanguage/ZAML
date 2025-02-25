@@ -45,7 +45,7 @@ namespace ZAMLPOC
       ""nine""
     ],
     ""yaml"": [
-      ""slim and flexible"",
+      ""slim and flexible, but with a tricky spec"",
       ""better for configuration""
     ],
     ""zaml"": [
@@ -63,10 +63,10 @@ namespace ZAMLPOC
           null,
           136129581883,
           false,
-          2,
+          [],
           ""truth"",
           3.1416,
-          4,
+          {},
           5,
           -65537,
           7,
@@ -75,7 +75,7 @@ namespace ZAMLPOC
         ],
         {
           ""id"": ""I'm an object, somewhat buried ;^)"",
-          ""when"": ""1970-03-01""
+          ""when"": ""#1970-03-01#""
         },
         ""( d + e )"",
         {}

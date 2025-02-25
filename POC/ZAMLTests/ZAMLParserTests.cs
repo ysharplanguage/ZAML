@@ -14,11 +14,10 @@ namespace ZAMLTests
         {
             // Arrange
             var parser = new ZAMLParser();
+            // (Indentation = 3)
             var input3 = @"
 
-// (Indentation = 3)
-
-// 3 ""objects"" (so to speak)
+/// 3 ""objects"" (so to speak)
 
 #
    id: 1
@@ -32,7 +31,7 @@ namespace ZAMLTests
    id: 3
    name: three
 
-// (The end)
+/// (The end)
 ";
 
             // Act
@@ -58,20 +57,20 @@ namespace ZAMLTests
         {
             // Arrange
             var parser = new ZAMLParser();
+            // (No indentation needed to be inferred)
             var input = @"
-// (No indentation needed to be inferred)
 
 1
 
 ""200""
 
-3.1416 // (Parsed as a decimal)
+3.1416 /// (Parsed as a decimal)
 
 -4000
 
-5000000000000000000 // (Parsed as a long (Int64))
+5000000000000000000 /// (Parsed as a long (Int64))
 
-// (The end)
+/// (The end)
 ";
 
             // Act
@@ -88,11 +87,10 @@ namespace ZAMLTests
         {
             // Arrange
             var parser = new ZAMLParser();
+            // (Indentation = 3)
             var input3 = @"
 
-// (Indentation = 3)
-
-// 2 lists, with the second containing implicit sub-lists at various levels
+/// 2 lists, with the second containing implicit sub-lists at various levels
 
 @
    1
@@ -101,21 +99,21 @@ namespace ZAMLTests
 
 @
    item1
-   @  // (Explicit sub-list)
+   @  /// (Explicit sub-list)
       item21
       item22
       item23
       
    item3
 
-   // (Implicit sub-list)
+   /// (Implicit sub-list)
       item41
 
-      #             // An ""object"", sibling of item41 and item43
+      #             /// An ""object"", sibling of item41 and item43
          id: item42
          name: ""4.2""
 
-// (More implicit sub-lists below)
+/// (More implicit sub-lists below)
 
       item43
 
@@ -123,12 +121,9 @@ namespace ZAMLTests
 
          item52
 
-            item521
+         @ item521 item522 item523
 
-            item522
-            item523
-
-// (The end)
+/// (The end)
 ";
             var expected_json = @"[
   [
@@ -177,10 +172,10 @@ namespace ZAMLTests
         {
             // Arrange
             var parser = new ZAMLParser();
+            // (Indentation = 4)
             var input4 = @"
-// (Indentation = 4)
 
-// A two-dimensional matrix, which makes profit from implicit (and inlined) sub-lists
+/// A two-dimensional matrix, which makes profit from implicit (and inlined) sub-lists
 @
     1   0   0   0   0
     0   1   0   0   0
@@ -188,7 +183,7 @@ namespace ZAMLTests
     0   0   0   1   0
     0   0   0   0   1
 
-// (The end)
+/// (The end)
 ";
             var expected_json = @"[
   [
@@ -248,21 +243,23 @@ namespace ZAMLTests
 #
     schema: @
         #
-            // (Pretend hypothetical enum type definition)
+            /// (Pretend hypothetical enum type definition)
             name: HttpStatus
             kind: enum
             base: int
-            : @         // (Empty key)
+
+            : @ /// (Empty key and explicit start of list)
                 200 OK
                 403 Unauthorized
                 404 NotFound
 
         #
-            // (Pretend hypothetical class type definition)
+            /// (Pretend hypothetical class type definition)
             name: SomeDataModel
             kind: class
             base: object
-            : @
+
+            :   /// (Empty key and implicit start of list)
                 int Id
                 string ExternalId
 ";
@@ -321,22 +318,25 @@ namespace ZAMLTests
             // Arrange
             var parser = new ZAMLParser();
             var input4 = @"
+
 #
     one: ( 0 + 1 )
+
     whatever: null
-    : @
+    more :              /// (Uses an implicit start of list)
         ( 1 + 2 )
         null
             ( 3 * 4 )
             twelve
             ( n => ( ( 0 < n ) ? ( n * ( this ( n - 1 ) ) ) : 1 ) )
             Factorial
+
 ";
             var expected_json = @"[
   {
     ""one"": ""( 0 + 1 )"",
     ""whatever"": null,
-    """": [
+    ""more"": [
       ""( 1 + 2 )"",
       null,
       [

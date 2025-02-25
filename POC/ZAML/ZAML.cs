@@ -8,13 +8,14 @@ namespace System.Text.ZAML
     {
         internal sealed class LineReader
         {
-            private readonly string[] lines; private int at = -1;
+            private readonly string[] lines;
+            private int at = -1;
             internal LineReader(string[] lines) => this.lines = lines;
-            internal string Next() { int tail; while (++at < lines.Length && (string.Equals(lines[at].Trim(), string.Empty) || string.Equals((lines[at] = (tail = lines[at].IndexOf("//")) >= 0 ? lines[at].Substring(0, tail).TrimEnd() : lines[at]).Trim(), string.Empty))) ; return at < lines.Length ? lines[at] : null; }
+            internal string Next() { int tail; while (++at < lines.Length && (string.Equals(lines[at].Trim(), string.Empty) || string.Equals((lines[at] = (tail = lines[at].IndexOf("///")) >= 0 ? lines[at].Substring(0, tail).TrimEnd() : lines[at]).Trim(), string.Empty))) ; return at < lines.Length ? lines[at] : null; }
         }
         private int indent = 0;
         private static readonly Regex Spaces = new Regex("\\s+", RegexOptions.Compiled);
-        private static readonly Regex Special = new Regex("(\\\\|\\\"|\\@|\\#|\\:|\\[|\\]|\\{|\\})", RegexOptions.Compiled);
+        private static readonly Regex Special = new Regex("(\\\\|\\\"|\\@|\\#|\\[|\\]|\\{|\\}|\\(|\\))", RegexOptions.Compiled);
         private static readonly Regex Literals = new Regex("\"(\\\\\"|[^\"])*\"", RegexOptions.Compiled);
         private static KeyValuePair<string, object> NewKey(string name) => new KeyValuePair<string, object>(name, null);
         private static object EmptyArray() => new object[0];
@@ -22,7 +23,28 @@ namespace System.Text.ZAML
         private static (object, string) DoParse(LineReader reader, int indent, int at = 0, string nextLine = null)
         {
             static int IndentOf(string line) { int count = 0, c = -1; while (++c < line.Length && char.IsWhiteSpace(line[c])) count++; return count; }
-            static string ToKey(string name) => name.StartsWith('"') && name.EndsWith('"') ? name.Substring(1, name.Length - 2) : name == string.Empty || !Special.Match(name.Substring(0, 1)).Success ? name : throw new InvalidOperationException($"Invalid key '{name}'");
+            static string ToKey(string name) => name.StartsWith('"') && name.EndsWith('"') ? name.Substring(1, name.Length - 2) : name;
+            static List<object> InlinedList(string value)
+            {
+                var split = Spaces.Replace(value, " ").Split(' ');
+                var list = new List<object>();
+                for (var i = 0; i < split.Length; i++)
+                {
+                    var item = split[i].Trim();
+                    if (i == 0 && item == "@") continue;
+                    else if (item == "[]") list.Add(EmptyArray());
+                    else if (item == "{}") list.Add(EmptyObject());
+                    else if (item == "false") list.Add(false);
+                    else if (item == "true") list.Add(true);
+                    else if (item == "null") list.Add(null);
+                    else if (int.TryParse(item, out var si32)) list.Add(si32);
+                    else if (long.TryParse(item, out var si64)) list.Add(si64);
+                    else if (decimal.TryParse(item, out var sd)) list.Add(sd);
+                    else if (!Special.Match(item.Substring(0, 1)).Success) list.Add(item);
+                    else throw new InvalidOperationException($"Malformed value '{item}'");
+                }
+                return list;
+            }
             var parse = new List<object>();
             var isMap = false;
             string line;
@@ -35,14 +57,23 @@ namespace System.Text.ZAML
                 if (indent == 0 && dent > 0) indent = dent;
                 if (dent == at)
                 {
-                    var value = line.Substring(dent); int colon;
+                    var value = line.Substring(dent);
+                    int colon;
                     if ((colon = value.IndexOf(':')) >= 0 && (!value.StartsWith('(') || !value.TrimEnd().EndsWith(')')))
                     {
-                        string name;
-                        if ((isMap = colon < value.LastIndexOf('#')) || colon < value.LastIndexOf('@'))
+                        string tail = value.Substring(colon + 1), name;
+                        int a, p, q;
+                        if ((isMap = colon < (p = value.IndexOf('#')) && ((q = tail.IndexOf('"')) < 0 || p < q)) || ((a = value.IndexOf('@')) < 0 && tail.Trim() == string.Empty) || colon < a)
                         {
                             name = value.Substring(0, colon).Trim();
+                            value = tail.Trim();
                             parse.Add(NewKey(ToKey(name)));
+                            if (value.StartsWith('@'))
+                            {
+                                if (value.Length > 1 && char.IsWhiteSpace(value[1]) && !char.IsWhiteSpace(value[value.Length - 1])) parse.Add(InlinedList(value));
+                                else if (value == "@") { }
+                                else throw new InvalidOperationException($"Malformed value '{value}'");
+                            }
                         }
                         else
                         {
@@ -62,34 +93,20 @@ namespace System.Text.ZAML
                                 else if (decimal.TryParse(value, out var d)) parse.Add(d);
                                 else if (value.StartsWith('"') && value.EndsWith('"')) parse.Add(value.Substring(1, value.Length - 2).Replace("\\n", "\n").Replace("\\\"", "\""));
                                 else if (value.StartsWith('(') && value.EndsWith(')')) parse.Add(value);
-                                else if (Spaces.Match(value).Success && value.Any(c => !char.IsWhiteSpace(c)) && !Special.Match(value.Substring(0, 1)).Success)
-                                {
-                                    var split = Spaces.Replace(value, " ").Split(' ');
-                                    var list = new List<object>();
-                                    for (var i = 0; i < split.Length; i++)
-                                    {
-                                        var item = split[i].Trim();
-                                        if (item == "false") list.Add(false);
-                                        else if (item == "true") list.Add(true);
-                                        else if (item == "null") list.Add(null);
-                                        else if (int.TryParse(item, out var si32)) list.Add(si32);
-                                        else if (long.TryParse(item, out var si64)) list.Add(si64);
-                                        else if (decimal.TryParse(item, out var sd)) list.Add(sd);
-                                        else if (item.Length > 0 && (item[0] == '_' || item[0] == '$' || char.IsLetter(item[0]))) list.Add(item);
-                                        else if (!Special.Match(item.Substring(0, 1)).Success) list.Add(item);
-                                        else throw new InvalidOperationException($"Malformed value '{item}'");
-                                    }
-                                    parse.Add(list);
-                                }
-                                else if (value.Length > 0 && (value[0] == '_' || value[0] == '$' || char.IsLetter(value[0]))) parse.Add(value);
-                                else if (value.Length > 0 && !Special.Match(value.Substring(0, 1)).Success) parse.Add(value);
+                                else if (Spaces.Match(value).Success && value.Any(c => !char.IsWhiteSpace(c)) && !Special.Match(value.Substring(0, 1)).Success) parse.Add(InlinedList(value));
+                                else if (!Special.Match(value.Substring(0, 1)).Success) parse.Add(value);
                                 else throw new InvalidOperationException($"Malformed value '{value}'");
                             }
                             else throw new InvalidOperationException($"Malformed value '{value}'");
                         }
                     }
                     else if (value == "#") parse.Add(NewKey(string.Empty));
-                    else if (value == "@") { /* Non-empty array literal) */ }
+                    else if (value.StartsWith('@'))
+                    {
+                        if (value.Length > 1 && char.IsWhiteSpace(value[1]) && !char.IsWhiteSpace(value[value.Length - 1])) parse.Add(InlinedList(value));
+                        else if (value == "@") { }
+                        else throw new InvalidOperationException($"Malformed value '{value}'");
+                    }
                     else if (value == "[]") parse.Add(EmptyArray());
                     else if (value == "{}") parse.Add(EmptyObject());
                     else if (value == "false") parse.Add(false);
@@ -100,26 +117,7 @@ namespace System.Text.ZAML
                     else if (decimal.TryParse(value, out var d)) parse.Add(d);
                     else if (value.StartsWith('"') && value.EndsWith('"')) parse.Add(value.Substring(1, value.Length - 2).Replace("\\n", "\n").Replace("\\\"", "\""));
                     else if (value.StartsWith('(') && value.EndsWith(')')) parse.Add(value);
-                    else if (Spaces.Match(value).Success && value.Any(c => !char.IsWhiteSpace(c)) && !Special.Match(value.Substring(0, 1)).Success)
-                    {
-                        var split = Spaces.Replace(value, " ").Split(' ');
-                        var list = new List<object>();
-                        for (var i = 0; i < split.Length; i++)
-                        {
-                            var item = split[i].Trim();
-                            if (item == "false") list.Add(false);
-                            else if (item == "true") list.Add(true);
-                            else if (item == "null") list.Add(null);
-                            else if (int.TryParse(item, out var si32)) list.Add(si32);
-                            else if (long.TryParse(item, out var si64)) list.Add(si64);
-                            else if (decimal.TryParse(item, out var sd)) list.Add(sd);
-                            else if (item.Length > 0 && (item[0] == '_' || item[0] == '$' || char.IsLetter(item[0]))) list.Add(item);
-                            else if (!Special.Match(item.Substring(0, 1)).Success) list.Add(item);
-                            else throw new InvalidOperationException($"Malformed value '{item}'");
-                        }
-                        parse.Add(list);
-                    }
-                    else if (value.Length > 0 && (value[0] == '_' || value[0] == '$' || char.IsLetter(value[0]))) parse.Add(value);
+                    else if (Spaces.Match(value).Success && value.Any(c => !char.IsWhiteSpace(c)) && !Special.Match(value.Substring(0, 1)).Success) parse.Add(InlinedList(value));
                     else if (value.Length > 0 && !Special.Match(value.Substring(0, 1)).Success) parse.Add(value);
                     else if (value.Length == 0) { }
                     else throw new InvalidOperationException($"Malformed value '{value}'");
@@ -133,7 +131,10 @@ namespace System.Text.ZAML
                         if (isMap) parse.Add(new List<object> { NewKey(null), child.Item1 }); else parse.Add(child.Item1);
                         isMap = false;
                     }
-                    else throw new InvalidOperationException($"Invalid indentation ({dent})");
+                    else
+                    {
+                        throw new InvalidOperationException($"Invalid indentation ({dent})");
+                    }
                 }
                 else
                 {
@@ -188,12 +189,11 @@ namespace System.Text.ZAML
                 return o;
             }
             static object Normalize2(object o) =>
-                o is Dictionary<string, object> d ? d.ToDictionary(p => p.Key, p => Normalize2(p.Value)) :
-                o is List<object> l ? l.Select(x => Normalize2(x)).ToArray() : o;
+                o is Dictionary<string, object> d ? d.ToDictionary(p => p.Key, p => Normalize2(p.Value)) : o is List<object> l ? l.Select(x => Normalize2(x)).ToArray() : o;
             var reader = new LineReader(Literals.Replace(input.ReplaceLineEndings("\n"), AsLiteral).Split('\n'));
-            var parse = DoParse(reader, indent).Item1;
-            List<object> list;
-            if ((list = parse as List<object>) != null && list.Count > 0 && ReferenceEquals(list[list.Count - 1], string.Empty)) list.RemoveAt(list.Count - 1);
+            var list = (List<object>)DoParse(reader, indent).Item1;
+            object parse;
+            if (list.Count > 0 && ReferenceEquals(list[list.Count - 1], string.Empty)) list.RemoveAt(list.Count - 1);
             return IsValid(parse = Normalize2(Normalize1(list))) ? parse : throw new InvalidOperationException("Invalid object layout");
         }
     }
